@@ -1,0 +1,338 @@
+---
+import { translatorByName, translatorById } from "../script/translator.js";
+
+interface Props {
+    champions: any;
+    mode: string;
+}
+
+const { champions, mode } = Astro.props;
+let lolol = champions.data;
+const resetTime = champions.expiration;
+---
+
+<form autocomplete="off">
+    <div class="autocomplete" style="width:300px;">
+        <input
+            id="myInput"
+            type="text"
+            name="Champion"
+            placeholder="Champion Name"
+        />
+    </div>
+</form>
+
+<!-- <script src="/src/script/ddragon.js"></script> -->
+<script src="/src/script/languageDropdown.js"></script>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+    body {
+        font: 16px Arial;
+    }
+    .autocomplete {
+        /*the container must be positioned relative:*/
+        position: relative;
+        display: inline-block;
+    }
+    input {
+        border: 1px solid transparent;
+        background-color: #f1f1f1;
+        padding: 10px;
+        font-size: 16px;
+    }
+    input[type="text"] {
+        background-color: #f1f1f1;
+        width: 100%;
+    }
+    input[type="submit"] {
+        background-color: DodgerBlue;
+        color: #fff;
+    }
+    .autocomplete-items {
+        position: absolute;
+        border: 1px solid #d4d4d4;
+        border-bottom: none;
+        border-top: none;
+        z-index: 99;
+        /*position the autocomplete items to be the same width as the container:*/
+        top: 100%;
+        left: 0;
+        right: 0;
+    }
+    .autocomplete-items div {
+        padding: 10px;
+        cursor: pointer;
+        background-color: #fff;
+        border-bottom: 1px solid #d4d4d4;
+    }
+    .autocomplete-items div:hover {
+        /*when hovering an item:*/
+        background-color: #e9e9e9;
+    }
+    .autocomplete-active {
+        /*when navigating through the items using the arrow keys:*/
+        background-color: DodgerBlue !important;
+        color: #ffffff;
+    }
+</style>
+
+<script define:vars={{ lolol, translatorByName, translatorById, mode, resetTime }}>
+    let champions = Object.keys(lolol).map((champion) => {
+        return lolol[champion].name;
+    });
+    let gameOver = false;
+    
+    if (localStorage.getItem("resetTime") == null) {
+        localStorage.setItem("resetTime", resetTime);
+    } else if (localStorage.getItem("resetTime") != resetTime) {
+        const event = new CustomEvent("reset");
+        window.dispatchEvent(event);
+        localStorage.setItem("resetTime", resetTime);
+    }
+
+    const selectionList = [];
+    const storedChampions =
+        JSON.parse(localStorage.getItem(`selectedChampions${mode}`)) || [];
+
+    // Inhalte des inneren Arrays in selectionList übernehmen
+    selectionList.push(...storedChampions);
+    // Entferne den ausgewählten Champion aus dem champions-Array
+    selectionList.forEach((id) => {
+        if (translatorById[id]) {
+            champions.splice(champions.indexOf(translatorById[id].name), 1);
+        }
+    });
+
+    window.addEventListener("reset", (e) => {
+        champions = Object.keys(lolol).map((champion) => {
+            return lolol[champion].name;
+        });
+        selectionList.length = 0;
+        autocomplete(document.getElementById("myInput"), champions);
+        gameOver = false;
+    });
+
+    function autocomplete(inp, arr) {
+        /*the autocomplete function takes two arguments,
+      the text field element and an array of possible autocompleted values:*/
+        var currentFocus;
+
+        /*execute a function when someone writes in the text field:*/
+        inp.addEventListener("input", function (e) {
+            var a,
+                b,
+                i,
+                val = this.value;
+            /*close any already open lists of autocompleted values*/
+            closeAllLists();
+            if (!val) {
+                return false;
+            }
+            currentFocus = -1;
+            /*create a DIV element that will contain the items (values):*/
+            a = document.createElement("DIV");
+            a.setAttribute("id", this.id + "autocomplete-list");
+            a.setAttribute("class", "autocomplete-items");
+            a.classList.add(
+                "bg-gray-800",
+                "rounded-lg",
+                "w-full",
+                "z-10",
+                "max-h-96",
+                "overflow-y-auto",
+                "absolute",
+                "top-10",
+                "left-0",
+                "right-0",
+                "text-gray-300"
+            );
+            /*append the DIV element as a child of the autocomplete container:*/
+            this.parentNode.appendChild(a);
+            /*for each item in the array...*/
+            for (i = 0; i < arr.length; i++) {
+                /*check if the item starts with the same letters as the text field value:*/
+                const normalizedVal = val.toUpperCase();
+                const normalizedItem = arr[i].toUpperCase();
+                const overlyNormalizedItem = arr[i].toUpperCase().replace("'", "");
+                const hasSpace = arr[i].indexOf(" ") > -1;
+                const matchesStart = normalizedItem.startsWith(normalizedVal) ? true : overlyNormalizedItem.startsWith(normalizedVal);
+                const matchesAfterSpace = hasSpace
+                    ? arr[i]
+                          .slice(arr[i].indexOf(" ") + 1)
+                          .toUpperCase()
+                          .startsWith(normalizedVal)
+                    : false;
+
+                if (matchesStart || matchesAfterSpace) {
+                    /*create a DIV element for each matching element:*/
+                    b = document.createElement("DIV");
+                    b.classList.add(
+                        "flex",
+                        "items-center",
+                        "p-2",
+                        "hover:bg-gray-700",
+                        "focus:bg-gray-700"
+                    );
+                    b.innerHTML = `<img class="mr-2" src="https://ddragon.leagueoflegends.com/cdn/${localStorage.getItem("version") || "15.8.1"}/img/champion/${translatorByName[arr[i]].id}.png" alt="X" width="40" height="40" />`;
+                    /*make the matching letters bold:*/
+                    /* If substring has ', make it bold too */
+                    let p = document.createElement("p")
+                    if (
+                        arr[i].substr(0, val.length).indexOf("'") > -1 &&
+                        val.indexOf("'") == -1
+                    ) {
+                        p.innerHTML +=
+                            "<strong>" +
+                            arr[i].substr(0, val.length + 1) +
+                            "</strong>";
+                        p.innerHTML += arr[i].substr(val.length + 1);
+                    } else if (
+                        arr[i].indexOf(" ") > -1
+                            ? arr[i]
+                                  .slice(arr[i].indexOf(" ") + 1)
+                                  .substr(0, val.length)
+                                  .toUpperCase() == val.toUpperCase()
+                            : false
+                    ) {
+                        p.innerHTML += arr[i].substr(
+                            0,
+                            arr[i].indexOf(" ") + 1
+                        );
+                        p.innerHTML +=
+                            "<strong>" +
+                            arr[i].slice(
+                                arr[i].indexOf(" ") + 1,
+                                arr[i].indexOf(" ") + 1 + val.length
+                            );
+                        ("</strong>");
+                        p.innerHTML += arr[i].substr(
+                            arr[i].indexOf(" ") + 1 + val.length
+                        );
+                    } else {
+                        p.innerHTML +=
+                            "<strong>" +
+                            arr[i].substr(0, val.length) +
+                            "</strong>";
+                            p.innerHTML += arr[i].substr(val.length);
+                    }
+                    b.appendChild(p);
+                    /*insert a input field that will hold the current array item's value:*/
+                    b.innerHTML += `<input type='hidden' value="${arr[i]}">`;
+                    /*execute a function when someone clicks on the item value (DIV element):*/
+                    b.addEventListener("click", function (e) {
+                        /*insert the value for the autocomplete text field:*/
+                        inp.value = this.getElementsByTagName("input")[0].value;
+                        /* Überprüfe, ob der eingegebene Wert in der Champions-Liste enthalten ist: */
+                        if (champions.includes(inp.value)) {
+                            /* Sende das Formular ab: */
+                            setSelection(inp.value);
+                            inp.value = "";
+                            //inp.form.submit();
+                        }
+                        /*close the list of autocompleted values,
+                  (or any other open lists of autocompleted values:*/
+                        closeAllLists();
+                    });
+                    a.appendChild(b);
+                }
+            }
+        });
+        /*execute a function presses a key on the keyboard:*/
+        inp.addEventListener("keydown", function (e) {
+            var x = document.getElementById(this.id + "autocomplete-list");
+            if (x) x = x.getElementsByTagName("div");
+            if (e.keyCode == 40) {
+                /* Wenn die Pfeil-nach-unten-Taste gedrückt wird,
+        erhöhe die currentFocus-Variable: */
+                currentFocus++;
+                /* und mache das aktuelle Element sichtbarer: */
+                addActive(x);
+            } else if (e.keyCode == 38) {
+                // Pfeil-nach-oben
+                /* Wenn die Pfeil-nach-oben-Taste gedrückt wird,
+        verringere die currentFocus-Variable: */
+                currentFocus--;
+                /* und mache das aktuelle Element sichtbarer: */
+                addActive(x);
+            } else if (e.keyCode == 13) {
+                /* Wenn die Enter-Taste gedrückt wird, verhindere das Absenden des Formulars: */
+                e.preventDefault();
+                if (currentFocus > -1) {
+                    /* Simuliere einen Klick auf das "aktive" Element: */
+                    if (x) x[currentFocus].click();
+                } else {
+                    /* Wenn kein Element aktiv ist, wähle das oberste Element aus: */
+                    if (x && x.length > 0) {
+                        x[0].click();
+                    }
+                }
+            }
+        });
+        function addActive(x) {
+            /*a function to classify an item as "active":*/
+            if (!x) return false;
+            /*start by removing the "active" class on all items:*/
+            removeActive(x);
+            if (currentFocus >= x.length) currentFocus = 0;
+            if (currentFocus < 0) currentFocus = x.length - 1;
+            /*add class "autocomplete-active":*/
+            x[currentFocus].classList.add("autocomplete-active", "bg-gray-700");
+        }
+        function removeActive(x) {
+            /*a function to remove the "active" class from all autocomplete items:*/
+            for (var i = 0; i < x.length; i++) {
+                x[i].classList.remove("autocomplete-active", "bg-gray-700");
+            }
+        }
+        function closeAllLists(elmnt) {
+            /*close all autocomplete lists in the document,
+        except the one passed as an argument:*/
+            var x = document.getElementsByClassName("autocomplete-items");
+            for (var i = 0; i < x.length; i++) {
+                if (elmnt != x[i] && elmnt != inp) {
+                    x[i].parentNode.removeChild(x[i]);
+                }
+            }
+        }
+        /*execute a function when someone clicks in the document:*/
+        document.addEventListener("click", function (e) {
+            closeAllLists(e.target);
+        });
+    }
+
+    /*An array containing all the champion names in the world:*/
+
+    /*initiate the autocomplete function on the "myInput" element, and pass along the countries array as possible autocomplete values:*/
+    autocomplete(document.getElementById("myInput"), champions);
+
+    function setSelection(input) {
+        if (gameOver) {
+            return;
+        }
+        let inputToId = translatorByName[input].id;
+        selectionList.push(inputToId);
+        champions.splice(champions.indexOf(input), 1);
+        localStorage.setItem(
+            `selectedChampions${mode}`,
+            JSON.stringify(selectionList)
+        );
+        // Emit the event
+        window.dispatchEvent(
+            new CustomEvent("championSelected", {
+                detail: inputToId,
+            })
+        );
+    }
+
+    window.addEventListener("gameOver", (e) => {
+        gameOver = true;
+    });
+
+    /* // Listen for events (do this once when the page loads)
+    window.addEventListener("championSelected", (e) => {
+        console.log("Champion selected:", e.detail);
+    }); */
+</script>

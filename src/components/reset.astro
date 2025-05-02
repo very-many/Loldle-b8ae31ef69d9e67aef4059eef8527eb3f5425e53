@@ -1,0 +1,10 @@
+<button id="Reset" class="text-gray-300 cursor-pointer">Reset</button>
+
+<script>
+    const resetButton = document.getElementById("Reset");
+    resetButton?.addEventListener("click", () => {
+        localStorage.removeItem("selectedChampionsClassic");
+        const event = new CustomEvent("reset");
+        window.dispatchEvent(event);
+    });
+</script>
